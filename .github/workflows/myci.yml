@@ -1,32 +1,29 @@
 name: CI
-
+ 
 on:
 
   push:
 
   pull_request:
-
-
+ 
 permissions:
 
   contents: read
 
   pull-requests: write
-
+ 
 jobs:
 
   build:
 
     runs-on: ubuntu-latest
-
-
+ 
     steps:
 
       - name: Checkout code
 
         uses: actions/checkout@v4
-
-
+ 
       - name: Set up Python
 
         uses: actions/setup-python@v5
@@ -34,32 +31,27 @@ jobs:
         with:
 
           python-version: "3.12"
-
-
+ 
       - name: Install dependencies
 
         run: pip install -r requirements.txt
-
-
+ 
       - name: Build
 
         run: python -m compileall .
-
-
+ 
   test:
 
     needs: build
 
     runs-on: ubuntu-latest
-
-
+ 
     steps:
 
       - name: Checkout code
 
         uses: actions/checkout@v4
-
-
+ 
       - name: Set up Python
 
         uses: actions/setup-python@v5
@@ -67,38 +59,100 @@ jobs:
         with:
 
           python-version: "3.12"
-
-
+ 
       - name: Install dependencies
 
         run: pip install -r requirements.txt
-
-
+ 
       - name: Run tests
 
         run: pytest
-
-
-  docker:
+ 
+  security:
 
     needs: test
 
     runs-on: ubuntu-latest
-
-
+ 
     steps:
 
       - name: Checkout code
 
         uses: actions/checkout@v4
+ 
+      - name: Set up Python
 
+        uses: actions/setup-python@v5
 
+        with:
+
+          python-version: "3.12"
+ 
+      - name: Install dependencies
+
+        run: pip install -r requirements.txt
+ 
+      - name: Scan dependencies
+
+        run: |
+
+          pip install pip-audit
+
+          pip-audit
+ 
+  static-analysis:
+
+    needs: test
+
+    runs-on: ubuntu-latest
+ 
+    steps:
+
+      - name: Checkout code
+
+        uses: actions/checkout@v4
+ 
+      - name: Set up Python
+
+        uses: actions/setup-python@v5
+
+        with:
+
+          python-version: "3.12"
+ 
+      - name: Install dependencies
+
+        run: pip install -r requirements.txt
+ 
+      - name: Run static analysis
+
+        run: |
+
+          pip install bandit
+
+          bandit -r . -ll
+ 
+  docker:
+
+    needs:
+
+      - security
+
+      - static-analysis
+
+    runs-on: ubuntu-latest
+ 
+    steps:
+
+      - name: Checkout code
+
+        uses: actions/checkout@v4
+ 
       - name: Build Docker image
 
-        run: docker build -t devops-demo .
-
-
+        run: docker build -t devops-demo:${{ github.sha }} .
+ 
       - name: Run application inside container
 
-        run: docker run devops-demo
+        run: docker run --rm devops-demo:${{ github.sha }}
  
