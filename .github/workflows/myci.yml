@@ -39,8 +39,7 @@ jobs:
       - name: Build
 
         run: python -m compileall .
- 
-    test:
+ test:
 
     needs: build
 
